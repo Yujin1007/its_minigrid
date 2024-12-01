@@ -1,0 +1,54 @@
+seed: 9
+
+run_notes: null
+
+model_base_path: null  # Folder to load the model from
+model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
+teacher:
+#  path: toy_teacher/rl_train_logs/2024-11-21-151501_map=map_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint  # Folder to load the model from
+  path: toy_teacher/rl_train_logs/map_realizability/2024-11-26-133629_map=map_realizability3_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint
+  checkpoint: final_model  # Model checkpoint zip file name (without .zip) to load
+
+compute:
+  n_gpu_workers: 1
+  n_cpu_workers: 8  # One gym env per cpu
+
+logging:
+  log_freq: 300  # How many times to log during training
+  video_save_freq: 20000 # Frequency to save the video
+  model_save_freq: 100000  # Frequency to save the model
+
+  wandb_project: toy
+  wandb_mode: online
+  wandb_tags: []
+
+  run_name: null
+  run_path: null
+
+env:
+#  example_name: map
+  example_name: student_failed_map3_1
+#  example_name: map_realizability3
+  episode_length: 100
+  include_history: false
+
+bc_algo:
+  name: il
+  total_timesteps: 1000000
+  n_epochs: 10
+  batch_size: 64
+  gamma: 0.99
+  n: null
+#  pre_trained_path: toy_teacher/rl_train_logs/2024-11-21-151501_map=map_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint/final_mocgdel.zip
+
+#cost_fn: nav_shortest_path
+
+log_folder: ./toy_student/bc_train_log/map_realizablility
+log_path: ${log_folder}/${now:%Y-%m-%d-%H%M%S}/
+defaults:
+#  - seq_reward_model: dtw
+  - _self_
+
+hydra:
+  run:
+    dir: ${log_folder}/${now:%Y-%m-%d-%H%M%S}_map=${env.example_name}_rl=${bc_algo.name}-epochs=${bc_algo.n_epochs}-eplen=${env.episode_length}_s=${seed}_nt=${run_notes}

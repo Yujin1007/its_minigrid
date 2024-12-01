@@ -1,0 +1,45 @@
+seed: 42
+
+run_notes: null
+
+teacher:
+  path: toy_teacher/rl_train_logs/2024-11-21-151501_map=map_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint  # Folder to load the model from
+  checkpoint: final_model  # Model checkpoint zip file name (without .zip) to load
+
+compute:
+  n_gpu_workers: 1
+  n_cpu_workers: 4  # Number of workers for SubprocVecEnv
+
+logging:
+  log_freq: 300
+  video_save_freq: 20000  # Frequency to save the video
+  model_save_freq: 100000  # Frequency to save the model
+
+  wandb_project: toy_student_bc
+  wandb_mode: online
+  wandb_tags: []
+
+  run_name: null
+  run_path: null
+
+env:
+  example_name: map
+  episode_length: 100
+  include_history: false
+
+imitation:
+  bc_epochs: 10
+  num_episodes: 20  # Number of demonstration episodes
+
+sweep:
+  enabled: false
+  n_trails: 5
+
+log_folder: toy_student/bc_train_log
+
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: ${log_folder}/${now:%Y-%m-%d-%H%M%S}_map=${env.example_name}_bc-epochs=${imitation.bc_epochs}-eplen=${env.episode_length}_s=${seed}_nt=${run_notes}

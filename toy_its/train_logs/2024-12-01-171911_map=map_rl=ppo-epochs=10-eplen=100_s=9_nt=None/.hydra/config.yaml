@@ -1,0 +1,36 @@
+seed: 9
+run_notes: null
+model_base_path: null
+model_checkpoint: null
+compute:
+  n_gpu_workers: 1
+  n_cpu_workers: 1
+logging:
+  log_freq: 300
+  video_save_freq: 1000000
+  model_save_freq: 1000000
+  wandb_project: toy_its
+  wandb_mode: online
+  wandb_tags: []
+  run_name: null
+  run_path: null
+env:
+  example_name: map
+  episode_length: 100
+  include_history: false
+rl_algo:
+  name: ppo
+  total_timesteps: 5000000
+  n_epochs: 10
+  lr: 0.00025
+  batch_size: 64
+  gamma: 0.99
+  ent_coef: 0.25
+  vf_coef: 1.0
+  'n': null
+  use_relative_rewards: false
+bc_algo:
+  training_interval: 1000000
+  epochs: 100
+  batch_size: 64
+log_folder: toy_its/train_logs/
