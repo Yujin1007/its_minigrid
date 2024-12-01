@@ -1,0 +1,61 @@
+seed: 9
+
+run_notes: null
+
+model_base_path: null  # Folder to load the model from
+model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
+
+compute:
+  n_gpu_workers: 1
+  n_cpu_workers: 1  # One gym env per cpu
+
+logging:
+  log_freq: 300  # How many times to log during training
+  video_save_freq: 1000000 # Frequency to save the video
+  model_save_freq: 1000000  # Frequency to save the model
+
+  wandb_project: toy_its
+  wandb_mode: online
+  wandb_tags: []
+
+  run_name: null
+  run_path: null
+
+env:
+#  example_name: map
+#  example_name: map_realizability2
+  example_name: map
+  episode_length: 100
+  include_history: false
+
+rl_algo:
+  name: ppo
+  total_timesteps: 5000000
+#  total_timesteps: 10000000
+  n_epochs: 10
+  lr: 2.5e-4
+  batch_size: 64
+  gamma: 0.99
+  ent_coef: 0.25  # Entropy coefficient in the loss function (best values we found for PPO for the navigation grid env)
+  vf_coef: 1.0  # Value function coefficient in the loss function (best values we found for PPO for the navigation grid env)
+  # Used by REINFORCE/Policy Gradient
+  n: null
+  use_relative_rewards: false
+
+bc_algo:
+  training_interval: 1000000
+  epochs: 100 #500
+  batch_size: 64
+
+
+#cost_fn: nav_shortest_path
+
+log_folder: toy_its/train_logs/
+
+defaults:
+#  - seq_reward_model: dtw
+  - _self_
+
+hydra:
+  run:
+    dir: ${log_folder}/${now:%Y-%m-%d-%H%M%S}_map=${env.example_name}_rl=${rl_algo.name}-epochs=${rl_algo.n_epochs}-eplen=${env.episode_length}_s=${seed}_nt=${run_notes}

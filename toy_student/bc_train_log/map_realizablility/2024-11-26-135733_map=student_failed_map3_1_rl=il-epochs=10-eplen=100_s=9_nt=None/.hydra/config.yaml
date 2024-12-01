@@ -1,0 +1,32 @@
+seed: 9
+run_notes: null
+model_base_path: null
+model_checkpoint: null
+teacher:
+  path: toy_teacher/rl_train_logs/map_realizability/2024-11-26-133629_map=map_realizability3_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint
+  checkpoint: final_model
+compute:
+  n_gpu_workers: 1
+  n_cpu_workers: 8
+logging:
+  log_freq: 300
+  video_save_freq: 20000
+  model_save_freq: 100000
+  wandb_project: toy
+  wandb_mode: online
+  wandb_tags: []
+  run_name: null
+  run_path: null
+env:
+  example_name: student_failed_map3_1
+  episode_length: 100
+  include_history: false
+bc_algo:
+  name: il
+  total_timesteps: 1000000
+  n_epochs: 10
+  batch_size: 64
+  gamma: 0.99
+  'n': null
+log_folder: ./toy_student/bc_train_log/map_realizablility
+log_path: ${log_folder}/${now:%Y-%m-%d-%H%M%S}/
