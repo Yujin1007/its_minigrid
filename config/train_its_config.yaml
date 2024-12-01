@@ -7,7 +7,7 @@ model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
 
 compute:
   n_gpu_workers: 1
-  n_cpu_workers: 1  # One gym env per cpu
+  n_cpu_workers: 8  # One gym env per cpu
 
 logging:
   log_freq: 300  # How many times to log during training
