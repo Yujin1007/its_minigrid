@@ -671,7 +671,7 @@ class RLBCTrainingCallback(BaseCallback):
             terminal=True,
         )
 
-    def _collect_demonstrations(self,num_episodes=10, isStudent=False):
+    def _collect_demonstrations(self,num_episodes=30, isStudent=False):
         """
         Collect multiple trajectories (demonstrations) using the provided model.
 
@@ -708,7 +708,7 @@ class RLBCTrainingCallback(BaseCallback):
         model_name = "bc_model_"+str(self.num_timesteps)+".pth"
         model_path = os.path.join(self.bc_save_path, model_name)
         self.bc_model.policy.save(model_path)
-        student_states = self._collect_demonstrations(isStudent=True, num_episodes=3)
+        student_states = self._collect_demonstrations(isStudent=True, num_episodes=30)
 
         return student_states
 
@@ -742,8 +742,8 @@ class RLBCTrainingCallback(BaseCallback):
             self._save_student_states(student_states)
 
             self.training_env.env_method("_set_initial_states", student_states)
-            # student environment도 하는게 맞을까? -> student demonstration failure case는 항상 시작지점부터??
-            # self.eval_env._set_initial_states(student_states)
+
+            self.eval_env._set_initial_states(student_states)
 
 
         return True
