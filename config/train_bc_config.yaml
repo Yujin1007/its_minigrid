@@ -6,7 +6,7 @@ model_base_path: null  # Folder to load the model from
 model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
 teacher:
 #  path: toy_teacher/rl_train_logs/2024-11-21-151501_map=map_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint  # Folder to load the model from
-  path: toy_teacher/rl_train_logs/map_realizability/2024-11-26-133629_map=map_realizability3_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint
+  path: toy_its/train_logs/map2_fixpos/checkpoint
   checkpoint: final_model  # Model checkpoint zip file name (without .zip) to load
 
 compute:
@@ -26,8 +26,8 @@ logging:
   run_path: null
 
 env:
-#  example_name: map
-  example_name: student_failed_map3_1
+  example_name: map2
+#  example_name: student_failed_map
 #  example_name: map_realizability3
   episode_length: 100
   include_history: false
@@ -43,7 +43,7 @@ bc_algo:
 
 #cost_fn: nav_shortest_path
 
-log_folder: ./toy_student/bc_train_log/map_realizablility
+log_folder: ./toy_its/train_logs/map2_fixpos
 log_path: ${log_folder}/${now:%Y-%m-%d-%H%M%S}/
 defaults:
 #  - seq_reward_model: dtw

@@ -4,7 +4,7 @@ import numpy as np
 
 O = 0     #open space
 W = -1    # wall
-G = 3   #goal
+G = 3     #goal
 R = 1     #red object
 B = 2     #blue object
 A = 4     #agent
@@ -17,36 +17,7 @@ action_to_direction = {
             4: np.array([0, 0]) # Stay in place
         }
 
-# def update_location(agent_pos, action, map_array, history):
-#     """
-#     Update the agent's location based on the action taken.
-#
-#     If the new location is invalid, the agent stays in place.
-#         Invalid locations include:
-#             - Locations outside the map
-#             - Locations with a hole
-#             - Locations where the location has been visited before
-#     """
-#     direction = action_to_direction[action]
-#
-#     new_pos = agent_pos + direction
-#
-#     if is_valid_location(new_pos, map_array, history):
-#         return new_pos
-#     else:
-#         return agent_pos
 
-# def is_valid_location(pos, map_array, history):
-#     within_x_bounds = 0 <= pos[0] < map_array.shape[0]
-#     within_y_bounds = 0 <= pos[1] < map_array.shape[1]
-#
-#     if within_x_bounds and within_y_bounds:
-#         not_a_hole = map_array[pos[0], pos[1]] != -1
-#         not_visited = pos.tolist() not in history
-#
-#         return  not_a_hole and not_visited
-#     else:
-#         return False
 def update_location(agent_pos, action, map_array, goal):
     """
     Update the agent's location and handle movable objects.
@@ -86,12 +57,6 @@ def update_location(agent_pos, action, map_array, goal):
     map_array[new_pos[0],new_pos[1]] = A
     return new_pos, map_array, is_goal
 
-def masking_obs(obs):
-    map = obs.copy()
-    obj_idx = np.argwhere(map == R)
-    if len(obj_idx) > 0:
-        map[obj_idx[0][0], obj_idx[0][1]] = B
-    return map
 
 def is_valid_location(pos, map_array):
     x, y = pos
@@ -100,6 +65,14 @@ def is_valid_location(pos, map_array):
     if map_array[x, y] == W:
         return False
     return True
+
+
+def masking_obs(obs):
+    map = obs.copy()
+    obj_idx = np.argwhere(map == R)
+    if len(obj_idx) > 0:
+        map[obj_idx[0][0], obj_idx[0][1]] = B
+    return map
     
 def render_map_and_agent(map_array, agent_pos):
     """

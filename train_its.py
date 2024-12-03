@@ -39,7 +39,6 @@ def train(cfg: DictConfig):
     # starting_pos = load_starting_pos_from_example_dict(cfg.env.example_name)
     #goal_pos = load_goal_pos_from_example_dict(cfg.env.example_name)
     goal_pos = np.argwhere(map_array == G)[0]
-    start_pos = np.argwhere(map_array == A)[0]
     # if goal_pos.size == 0:
     #     goal_pos = np.argwhere(map_array == G)[0]
 
@@ -59,7 +58,7 @@ def train(cfg: DictConfig):
         episode_length = cfg.env.episode_length
 
         make_env_fn = lambda: Monitor(
-            grid_class(map_array=np.copy(map_array), goal_pos=goal_pos, starting_pos=start_pos, render_mode="rgb_array",
+            grid_class(map_array=np.copy(map_array), goal_pos=goal_pos, render_mode="rgb_array",
                        episode_length=episode_length))
 
         training_env = make_vec_env(
@@ -74,7 +73,7 @@ def train(cfg: DictConfig):
         #     seed=cfg.seed,
         #     vec_env_cls=SubprocVecEnv,
         # )
-        eval_env = grid_class(map_array=np.copy(map_array), starting_pos=start_pos, goal_pos=goal_pos, render_mode="rgb_array",
+        eval_env = grid_class(map_array=np.copy(map_array), goal_pos=goal_pos, render_mode="rgb_array",
                          episode_length=episode_length)
 
         # Define the model

@@ -24,7 +24,7 @@ logging:
 env:
 #  example_name: map
 #  example_name: map_realizability2
-  example_name: map
+  example_name: map2
   episode_length: 100
   include_history: false
 

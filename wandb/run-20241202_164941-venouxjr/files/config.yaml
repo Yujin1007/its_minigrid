@@ -1,0 +1,201 @@
+_current_progress_remaining:
+    value: 1
+_custom_logger:
+    value: "False"
+_episode_num:
+    value: 0
+_last_episode_starts:
+    value: '[ True]'
+_last_obs:
+    value: |-
+        [[[ 0  2  0 -1  0  0  0  0  0]
+          [ 0  0  0 -1  0  0  0  0  0]
+          [ 1  0  0  4  0  0  0  0  0]
+          [ 0  0  0 -1  0  0  0  0  0]
+          [-1  0 -1 -1 -1 -1  3 -1 -1]
+          [ 0  0  0 -1  0  0  0  0  0]
+          [ 2  0  0  0  0  0  0  0  0]
+          [ 0  0  0 -1  0  0  0  0  0]
+          [ 0  0  0 -1  0  0  0  0  0]]]
+_last_original_obs:
+    value: None
+_logger:
+    value: <stable_baselines3.common.logger.Logger object at 0x157b0c730>
+_n_updates:
+    value: 0
+_num_timesteps_at_start:
+    value: 0
+_stats_window_size:
+    value: 100
+_total_timesteps:
+    value: 10000000
+_vec_normalize_env:
+    value: None
+_wandb:
+    value:
+        cli_version: 0.18.7
+        m: []
+        python_version: 3.9.20
+        t:
+            "1":
+                - 1
+                - 50
+                - 55
+            "2":
+                - 1
+                - 50
+                - 55
+            "3":
+                - 2
+                - 13
+                - 16
+                - 22
+                - 23
+                - 35
+                - 55
+            "4": 3.9.20
+            "5": 0.18.7
+            "8":
+                - 5
+            "12": 0.18.7
+            "13": darwin-arm64
+action_noise:
+    value: None
+action_space:
+    value: Discrete(5)
+algo:
+    value: PPO
+batch_size:
+    value: 64
+clip_range:
+    value: <function get_schedule_fn.<locals>.<lambda> at 0x157b0eaf0>
+clip_range_vf:
+    value: None
+compute:
+    value:
+        n_cpu_workers: 1
+        n_gpu_workers: 1
+device:
+    value: cpu
+ent_coef:
+    value: 0.25
+env:
+    value:
+        episode_length: 100
+        example_name: empty_map
+        include_history: false
+ep_info_buffer:
+    value: deque([], maxlen=100)
+ep_success_buffer:
+    value: deque([], maxlen=100)
+gae_lambda:
+    value: 0.95
+gamma:
+    value: 0.99
+learning_rate:
+    value: 0.00025
+log_folder:
+    value: toy_teacher/rl_train_logs
+logging:
+    value:
+        log_freq: 300
+        model_save_freq: 1000000
+        run_name: empty_map_2024-12-02-164940_nt=None
+        run_path: /Users/yujinkim/Desktop/its_minigrid/toy_teacher/rl_train_logs/empty_map_2024-12-02-164940_nt=None
+        video_save_freq: 500000
+        wandb_mode: online
+        wandb_project: toy_teacher
+        wandb_tags: []
+lr_schedule:
+    value: <function get_schedule_fn.<locals>.<lambda> at 0x150f35ca0>
+max_grad_norm:
+    value: 0.5
+model_base_path:
+    value: null
+model_checkpoint:
+    value: null
+n_envs:
+    value: 1
+n_epochs:
+    value: 10
+n_steps:
+    value: 100
+normalize_advantage:
+    value: "True"
+num_timesteps:
+    value: 0
+observation_space:
+    value: Box(-1, 4, (9, 9), int64)
+policy:
+    value: |-
+        ActorCriticPolicy(
+          (features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (pi_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (vf_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (mlp_extractor): MlpExtractor(
+            (policy_net): Sequential(
+              (0): Linear(in_features=81, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+            (value_net): Sequential(
+              (0): Linear(in_features=81, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+          )
+          (action_net): Linear(in_features=64, out_features=5, bias=True)
+          (value_net): Linear(in_features=64, out_features=1, bias=True)
+        )
+policy_class:
+    value: <class 'stable_baselines3.common.policies.ActorCriticPolicy'>
+policy_kwargs:
+    value: '{}'
+rl_algo:
+    value:
+        batch_size: 64
+        ent_coef: 0.25
+        gamma: 0.99
+        lr: 0.00025
+        "n": null
+        n_epochs: 10
+        name: ppo
+        total_timesteps: 10000000
+        use_relative_rewards: false
+        vf_coef: 1
+rollout_buffer:
+    value: <stable_baselines3.common.buffers.RolloutBuffer object at 0x150cf4c40>
+rollout_buffer_class:
+    value: <class 'stable_baselines3.common.buffers.RolloutBuffer'>
+rollout_buffer_kwargs:
+    value: '{}'
+run_notes:
+    value: null
+sde_sample_freq:
+    value: -1
+seed:
+    value: 9
+start_time:
+    value: 1733176184630633000
+sweep:
+    value:
+        enabled: false
+        n_trails: 5
+target_kl:
+    value: None
+tensorboard_log:
+    value: /Users/yujinkim/Desktop/its_minigrid/toy_teacher/rl_train_logs/empty_map_2024-12-02-164940_nt=None/tensorboard
+use_sde:
+    value: "False"
+verbose:
+    value: 1
+vf_coef:
+    value: 1

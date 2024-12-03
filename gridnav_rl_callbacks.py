@@ -685,6 +685,7 @@ class RLBCTrainingCallback(BaseCallback):
         trajectories = []
         # for _ in range(num_episodes):
         i=0
+        cnt_iter = 0
         while i < num_episodes:
             trajectory = self._rollout_steps(isStudent=isStudent)
             if isStudent: #student demonstration. collect only failed demonstration
@@ -694,6 +695,10 @@ class RLBCTrainingCallback(BaseCallback):
             else: # teacher demonstration. collect any demonstration.
                 trajectories.append(trajectory)
                 i+=1
+            cnt_iter += 1
+            if cnt_iter >= 500:
+                print(f"Among 500 run, {i} failed cases, consider BC train is over. ")
+                break
         return trajectories
     def _train_bc(self, trajectory):
         """
@@ -708,7 +713,7 @@ class RLBCTrainingCallback(BaseCallback):
         model_name = "bc_model_"+str(self.num_timesteps)+".pth"
         model_path = os.path.join(self.bc_save_path, model_name)
         self.bc_model.policy.save(model_path)
-        student_states = self._collect_demonstrations(isStudent=True, num_episodes=30)
+        student_states = self._collect_demonstrations(isStudent=True, num_episodes=10)
 
         return student_states
 

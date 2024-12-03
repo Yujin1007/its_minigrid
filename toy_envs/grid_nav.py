@@ -4,10 +4,11 @@ import gymnasium as gym
 from gymnasium import spaces
 
 import imageio
+from pygame.examples.music_drop_fade import starting_pos
 from torchgen.native_function_generation import self_to_out_signature
 
 from toy_envs.toy_env_utils import update_location, render_map_and_agent
-
+import copy
 DOWN = 0
 RIGHT = 1
 UP = 2
@@ -24,7 +25,7 @@ A = 4     #agent
 class GridNavigationEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"]}
 
-    def __init__(self, map_array, goal_pos, starting_pos=None, render_mode=None, episode_length=20, full_observability=True):
+    def __init__(self, map_array, goal_pos, render_mode=None, episode_length=20, full_observability=True):
         self.grid_size = map_array.shape  # The size of the square grid
 
         # Observations is the agent's location in the grid
@@ -38,7 +39,7 @@ class GridNavigationEnv(gym.Env):
         self.goal_pos = goal_pos
         self.episode_length = episode_length
         self.map = map_array
-        self.initial_states = [map_array]
+        self.initial_states = [copy.deepcopy(map_array)]
         self.test_attribute = 1
         self.flag_bring_map = False
         self.initial_map, self._starting_pos, self.obj_candidate, self.agent_candidate = self._choose_initial_state()
@@ -138,7 +139,31 @@ class GridNavigationEnv(gym.Env):
             return render_map_and_agent(self.map, self._agent_pos)
         else:
             return
-    
+
+class GridNavigationEmptyEnv(GridNavigationEnv):
+    def _choose_initial_state(self):
+        initial_map = copy.deepcopy(random.choice(self.initial_states))
+        # print("map\n",self.initial_states)
+        target_candidiate = [np.array([1,5]),np.array([1,6]),np.array([1,7]),
+                             np.array([2,5]),np.array([2,6]),np.array([2,7]),
+                             np.array([6,5]),np.array([6,6]),np.array([6,7]),
+                             np.array([7,5]),np.array([7,6]),np.array([7,7])]
+        target_obj = random.choice(list(target_candidiate))
+        initial_map[target_obj[0], target_obj[1]] = R
+
+        agent_candidate = np.argwhere((initial_map == O) | (initial_map == G)| (initial_map == R)) # it can locate either empty space or goal pos
+        starting_pos, obj1, obj2 = random.sample(list(agent_candidate), 3)
+
+        initial_map[obj1[0], obj1[1]] = B
+        initial_map[obj2[0], obj2[1]] = B
+        initial_map[starting_pos[0], starting_pos[1]] = A
+
+
+        agent_candidate = np.argwhere(initial_map == O)
+
+
+        obj_candidate = [target_obj, obj1, obj2]
+        return initial_map, starting_pos, obj_candidate, agent_candidate
 if __name__ == "__main__":
 
     env = GridNavigationEnv(
@@ -161,15 +186,16 @@ if __name__ == "__main__":
             [-1,  0, -1, -1, -1, -1,  G,  B, -1],
             [ 0,  0,  0, -1,  0,  0,  0,  0,  0],
             [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [ 0,  0,  0,  2,  0,  0,  B,  0,  0],
+            [ 0,  0,  0,  B,  R,  A,  0,  0,  0],
             [ 0,  0,  0, -1,  0,  0,  0,  0,  0]]),
 
-        render_mode="rgb_array",)
+        render_mode="rgb_array",
+        goal_pos=np.array([4,6]),)
     env.reset()
     env.render()
     
-    # path = [RIGHT, RIGHT, DOWN, DOWN, LEFT, LEFT, UP, STAY]
-    path = [UP, UP, RIGHT, RIGHT, RIGHT, RIGHT, UP,UP, RIGHT, DOWN,DOWN,DOWN, UP, LEFT, LEFT, LEFT, LEFT, LEFT,DOWN,DOWN,DOWN,DOWN,RIGHT,RIGHT,RIGHT,RIGHT, UP, RIGHT, UP,UP, DOWN,DOWN, LEFT,DOWN,DOWN,DOWN, RIGHT,UP,UP,UP,STAY]
+    path = [LEFT,LEFT,LEFT]
+    # path = [UP, UP, RIGHT, RIGHT, RIGHT, RIGHT, UP,UP, RIGHT, DOWN,DOWN,DOWN, UP, LEFT, LEFT, LEFT, LEFT, LEFT,DOWN,DOWN,DOWN,DOWN,RIGHT,RIGHT,RIGHT,RIGHT, UP, RIGHT, UP,UP, DOWN,DOWN, LEFT,DOWN,DOWN,DOWN, RIGHT,UP,UP,UP,STAY]
     # path = [3, 4, 2, 1, 3, 1, 3, 1, 2, 1, 1, 2, 2, 4, 1, 1, 0, 0, 0]
     frames = []
     frames.append(env.render())

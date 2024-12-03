@@ -54,19 +54,32 @@ map = {
     # }
 }
 map2 = {
+    "goal_pos": np.array([4, 6]),
     "map_array": np.array([
             [O, O, O, W, O, O, O, O, O],
             [O, O, O, W, O, O, B, O, O],
             [O, O, O, O, O, O, O, O, O],
             [O, O, O, W, O, O, O, O, O],
-            [W, A, W, W, O, B, G, O, O],
+            [W, O, W, W, O, B, G, O, O],
             [O, O, O, W, O, O, O, O, O],
             [O, O, O, O, O, O, O, O, O],
             [O, O, O, W, O, O, B, O, O],
             [O, O, O, W, O, O, O, O, O]
         ]),
 }
-
+empty_map = {
+    "map_array": np.array([
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, W, O, O, O, O, O],
+            [W, O, W, W, W, W, G, W, W],
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, W, O, O, O, O, O]
+    ]),
+}
 student_failed_map = {
     "plot": {
         "reward_vmin": 0,

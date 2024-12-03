@@ -3,6 +3,7 @@ from toy_examples.map import *
 examples = {
     "map": map,
     "map2": map2,
+    "empty_map": empty_map,
     "student_failed_map": student_failed_map,
     "map_realizability1": map_realizability1,
     "map_realizability2": map_realizability2,

@@ -1,0 +1,39 @@
+{
+  "os":  "macOS-15.1.1-arm64-arm-64bit",
+  "python":  "3.9.20",
+  "startedAt":  "2024-12-02T21:49:41.067463Z",
+  "program":  "/Users/yujinkim/Desktop/its_minigrid/train_rl.py",
+  "codePath":  "train_rl.py",
+  "git":  {
+    "remote":  "https://github.com/Yujin1007/its_minigrid.git",
+    "commit":  "34da87f2ff178c838cd77e4f0d0f607f04456a47"
+  },
+  "email":  "yujin1004k@gmail.com",
+  "root":  "/Users/yujinkim/Desktop/its_minigrid",
+  "host":  "COECIS-G7M6X9QPRY",
+  "username":  "yujinkim",
+  "executable":  "/opt/anaconda3/envs/minigrid/bin/python",
+  "codePathLocal":  "train_rl.py",
+  "cpu_count":  8,
+  "cpu_count_logical":  8,
+  "disk":  {
+    "/":  {
+      "total":  "494384795648",
+      "used":  "107442831360"
+    }
+  },
+  "memory":  {
+    "total":  "17179869184"
+  },
+  "cpu":  {
+    "count":  8,
+    "countLogical":  8
+  },
+  "apple":  {
+    "name":  "Apple M3",
+    "ecpuCores":  4,
+    "pcpuCores":  4,
+    "gpuCores":  10,
+    "memoryGb":  16
+  }
+}

@@ -7,12 +7,12 @@ model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
 
 compute:
   n_gpu_workers: 1
-  n_cpu_workers: 8  # One gym env per cpu
+  n_cpu_workers: 1  # One gym env per cpu
 
 logging:
   log_freq: 300  # How many times to log during training
-  video_save_freq: 20000 # Frequency to save the video
-  model_save_freq: 100000  # Frequency to save the model
+  video_save_freq: 500000 # Frequency to save the video
+  model_save_freq: 1000000  # Frequency to save the model
 
   wandb_project: toy_teacher
   wandb_mode: online
@@ -24,13 +24,13 @@ logging:
 env:
 #  example_name: map
 #  example_name: map_realizability3
-  example_name: student_failed_map3_1
+  example_name: empty_map
   episode_length: 100
   include_history: false
 
 rl_algo:
   name: ppo
-  total_timesteps: 1000000
+  total_timesteps: 10000000
 #  total_timesteps: 10000000
   n_epochs: 10
   lr: 2.5e-4
@@ -48,7 +48,7 @@ sweep:
 
 #cost_fn: nav_shortest_path
 
-log_folder: toy_teacher/rl_train_logs/student_failed_map3_1
+log_folder: toy_teacher/rl_train_logs
 
 defaults:
 #  - seq_reward_model: dtw
@@ -56,4 +56,4 @@ defaults:
 
 hydra:
   run:
-    dir: ${log_folder}/${now:%Y-%m-%d-%H%M%S}_map=${env.example_name}_rl=${rl_algo.name}-epochs=${rl_algo.n_epochs}-eplen=${env.episode_length}_s=${seed}_nt=${run_notes}
+    dir: ${log_folder}/${env.example_name}_${now:%Y-%m-%d-%H%M%S}_nt=${run_notes}
