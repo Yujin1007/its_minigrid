@@ -21,7 +21,7 @@ import csv
 import time
 
 from toy_envs.toy_env_utils import update_location, render_map_and_agent
-
+from stable_baselines3.common.callbacks import EvalCallback
 W = -1    # wall
 O = 0     #open space
 R = 1     #red object
@@ -346,13 +346,18 @@ class GridNavVideoRecorderCallback(BaseCallback):
             # obs_to_use = states[1:]  # Skip the first observation because we are calculating the reward based on what it looks like in the next state
             # agent_pos = np.argwhere(obs_to_use[-1] == A)[0]
             agent_pos = np.argwhere(states[-1] == A)[0]
-
+            goal_pos = np.argwhere(states[0] == G)[0]
             # print("argwhere agent pos:", agent_pos)
             # final_obs, _, _ = update_location(agent_pos=agent_pos, action=int(actions[-1]),
             #                                   map_array=obs_to_use[-1], goal=self._goal_pos)
 
-            final_obs, final_map, _ = update_location(agent_pos=agent_pos, action=int(actions[-1]),
+            final_obs, final_map, is_goal = update_location(agent_pos=agent_pos, action=int(actions[-1]),
                                               map_array=states[-1], goal=self._goal_pos)
+            if is_goal:
+                terminal_map = np.ones_like(final_map) * -1
+                terminal_map[final_obs[0], final_obs[1]] = A
+                terminal_map[goal_pos[0], goal_pos[1]] = R
+                final_map = terminal_map
 
             # if self.use_history:
             #     final_obs = np.reshape(obs_to_use[-1], self._map.shape)
@@ -377,6 +382,7 @@ class GridNavVideoRecorderCallback(BaseCallback):
             # screens[-1] = Image.fromarray(np.uint8(render_map_and_agent(self._map, final_obs)))
             # raw_screens.insert(0, raw_screens[-1])
             raw_screens[-1] = Image.fromarray(np.uint8(render_map_and_agent(final_map, final_obs)))
+            # raw_screens[-1] = Image.fromarray(np.uint8(render_map_and_agent(states[-1], final_obs)))
             # Save the raw_screens locally
             imageio.mimsave(os.path.join(self._rollout_save_path, f"{self.num_timesteps}_rollouts__.gif"), raw_screens, duration=1/30, loop=0)
             
@@ -752,6 +758,35 @@ class RLBCTrainingCallback(BaseCallback):
 
 
         return True
+
+class Curriculum(BaseCallback):
+    """
+    Stop the training once a threshold in episodic reward
+    has been reached (i.e. when the model is good enough).
+
+    It must be used with the ``EvalCallback``.
+
+    :param reward_threshold:  Minimum expected reward per episode
+        to stop training.
+    :param verbose: Verbosity level: 0 for no output, 1 for indicating when training ended because episodic reward
+        threshold reached
+    """
+
+    parent: EvalCallback
+
+    def __init__(self, reward_threshold: float, verbose: int = 0):
+        super().__init__(verbose=verbose)
+        self.reward_threshold = reward_threshold
+
+    def _on_step(self) -> bool:
+        assert self.parent is not None, "``StopTrainingOnMinimumReward`` callback must be used with an ``EvalCallback``"
+        continue_training = bool(self.parent.best_mean_reward < self.reward_threshold)
+        if self.verbose >= 1 and not continue_training:
+            print(
+                f"Stopping training because the mean reward {self.parent.best_mean_reward:.2f} "
+                f" is above the threshold {self.reward_threshold}"
+            )
+        return continue_training
 
 # class SetInitialStatesCallback(BaseCallback):
 #     def __init__(self, param_name, new_value, bc_training_interval, verbose=0):

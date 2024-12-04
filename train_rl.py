@@ -42,8 +42,8 @@ def train(cfg: DictConfig):
     # if goal_pos.size == 0:
     #     goal_pos = np.argwhere(map_array == G)[0]
     goal_pos = np.argwhere(map_array == G)[0]
-    # grid_class = GridNavigationEnv
-    grid_class = GridNavigationEmptyEnv
+    grid_class = GridNavigationEnv
+    # grid_class = GridNavigationEmptyEnv
     with wandb.init(
             project=cfg.logging.wandb_project,
             name=cfg.logging.run_name,

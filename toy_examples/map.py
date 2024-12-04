@@ -22,7 +22,7 @@ map = {
             [O, O, O, W, O, O, B, O, O],
             [O, O, O, O, O, O, O, O, O],
             [O, O, O, W, O, O, O, O, O],
-            [W, A, W, W, W, W, G, W, W],
+            [W, O, W, W, W, W, G, W, W],
             [O, O, O, W, O, O, O, O, O],
             [O, O, O, O, O, O, O, O, O],
             [O, O, O, W, O, O, B, O, O],

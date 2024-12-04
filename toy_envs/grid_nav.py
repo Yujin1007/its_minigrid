@@ -5,7 +5,9 @@ from gymnasium import spaces
 
 import imageio
 from pygame.examples.music_drop_fade import starting_pos
+from stable_baselines3.common.utils import obs_as_tensor
 from torchgen.native_function_generation import self_to_out_signature
+from wandb.wandb_agent import agent
 
 from toy_envs.toy_env_utils import update_location, render_map_and_agent
 import copy
@@ -42,23 +44,27 @@ class GridNavigationEnv(gym.Env):
         self.initial_states = [copy.deepcopy(map_array)]
         self.test_attribute = 1
         self.flag_bring_map = False
+        self.is_goal=False
         self.initial_map, self._starting_pos, self.obj_candidate, self.agent_candidate = self._choose_initial_state()
+        self._agent_pos = np.copy(self._starting_pos)
+        self._new_agent_pos = self._agent_pos
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
     
     def step(self, action):
         # print("after changing attiribute:",self._agent_pos)
-        self._new_agent_pos, self.map, is_goal = update_location(agent_pos=self._agent_pos, action=action, map_array=self.map,goal=self.goal_pos)
+        self._new_agent_pos, self.map, self.is_goal = update_location(agent_pos=self._agent_pos, action=action, map_array=self.map,goal=self.goal_pos)
         self._history.append(self._agent_pos.tolist())
 
         observation = self._get_obs()
-        info = self._get_info(is_goal)
-        # reward = 0
-        if is_goal:
-            reward = 1.0
-        else:
-            reward = 0.0
+        info = self._get_info()
+        reward = self._get_reward()
+        # # reward = 0
+        # if self.is_goal:
+        #     reward = 1.0
+        # else:
+        #     reward = 0.0
         # if self._new_agent_pos.tolist() == self._agent_pos.tolist():
         #     reward = -1
         # else:
@@ -67,23 +73,45 @@ class GridNavigationEnv(gym.Env):
 
         self.num_steps += 1
 
-        terminated = self.num_steps >= self.episode_length or is_goal
+        terminated = self.num_steps >= self.episode_length or self.is_goal
         return observation, reward, terminated,  False, info
 
     def _get_obs(self):
         # map = self.map.copy()
         # map[self._agent_pos[0], self._agent_pos[1]] = A
         # TODO make observation for partial observable student
+
         if self.full_observability:
             pass
+        if self.is_goal:
+            terminal_map = np.ones_like(self.map) * -1
+            terminal_map[self._new_agent_pos[0],self._new_agent_pos[1]] = A
+            terminal_map[self.goal_pos[0],self.goal_pos[1]] = R
+            # print(terminal_map)
+            obs = terminal_map
             # return self._agent_pos
         # print(self.map)
-        return self.map
-
-    
-    def _get_info(self, is_goal=False):
-        return {"step": self.num_steps, "goal": is_goal}
-
+        else:
+            obs =  self.map
+        feasibility = self._check_obs_feasibility(obs)
+        if feasibility:
+            return obs
+        else:
+            print("obs:\n",obs)
+            print("map\n", self.map)
+            print("termination \n", terminal_map)
+            return None
+    def _get_info(self):
+        return {"step": self.num_steps, "goal": self.is_goal}
+    def _get_reward(self):
+        target_pos = np.argwhere(self.map == R)[0]
+        l1_norm_to_goal = np.linalg.norm(target_pos-self.goal_pos, ord=1)
+        l1_norm_to_target = np.linalg.norm(target_pos-self._new_agent_pos, ord=1)
+        l1_norm = l1_norm_to_goal + l1_norm_to_target
+        if self.is_goal:
+            return 1
+        else:
+            return -l1_norm
     def _set_initial_states(self, new_initial_states) -> None:
         # Note: this value should be used only at the next reset
         flat_new_initial_states = [item for sublist in new_initial_states for item in sublist]
@@ -92,7 +120,7 @@ class GridNavigationEnv(gym.Env):
         # print(self.initial_states.shape)
     def _choose_initial_state(self):
 
-        initial_map= random.choice(self.initial_states)
+        initial_map= copy.deepcopy(random.choice(self.initial_states))
         # print("len initial_states:", len(self.initial_states), "\n",initial_map)
 
         # print("\n===========", self.test_attribute)
@@ -108,11 +136,12 @@ class GridNavigationEnv(gym.Env):
     def reset(self, obj_idx=None, seed=0):
         """
         This is a deterministic environment, so we don't use the seed."""
-
         self.num_steps = 0
+        self.is_goal=False
         self.initial_map, self._starting_pos, self.obj_candidate, self.agent_candidate = self._choose_initial_state()
 
         self._agent_pos = np.copy(self._starting_pos)
+        self._new_agent_pos = self._agent_pos
 
         self._history = [self._agent_pos.tolist()]
         if obj_idx is None:
@@ -127,9 +156,15 @@ class GridNavigationEnv(gym.Env):
         self.map[obj_pos[0], obj_pos[1]] = R
         self.map[self._starting_pos[0], self._starting_pos[1]] = A
 
-        # print("initial map:", self.map)
+        # print("###################initial map:\n", self.map)
         return self._get_obs(), self._get_info()
-
+    def _check_obs_feasibility(self,obs):
+        agent_pos = np.argwhere(obs == A)
+        target_pos = np.argwhere(obs == R)
+        if (len(agent_pos) == 0 or len(target_pos) == 0):
+            return False
+        else:
+            return True
     def render(self):
         """
         Render the environment as an RGB image.
@@ -151,7 +186,7 @@ class GridNavigationEmptyEnv(GridNavigationEnv):
         target_obj = random.choice(list(target_candidiate))
         initial_map[target_obj[0], target_obj[1]] = R
 
-        agent_candidate = np.argwhere((initial_map == O) | (initial_map == G)| (initial_map == R)) # it can locate either empty space or goal pos
+        agent_candidate = np.argwhere((initial_map == O) | (initial_map == G)) # it can locate either empty space or goal pos
         starting_pos, obj1, obj2 = random.sample(list(agent_candidate), 3)
 
         initial_map[obj1[0], obj1[1]] = B
@@ -240,18 +275,18 @@ if __name__ == "__main__":
 #
 #     def step(self, action):
 #         self.visited[tuple(self._agent_pos)] = 1
-#         self._agent_pos, self.map, is_goal = update_location(agent_pos=self._agent_pos, action=action, map_array=self.map, goal=self.goal_pos)
+#         self._agent_pos, self.map, self.is_goal = update_location(agent_pos=self._agent_pos, action=action, map_array=self.map, goal=self.goal_pos)
 #
 #         observation = self._get_obs()
 #         assert len(np.nonzero(observation == 2)) == 1
 #         info = self._get_info()
-#         if is_goal:
+#         if self.is_goal:
 #             reward = 1
 #         else:
 #             reward = 0
 #
 #         self.num_steps += 1
-#         terminated = self.num_steps >= self.episode_length or is_goal
+#         terminated = self.num_steps >= self.episode_length or self.is_goal
 #         print(f"step {self.num_steps}: {observation}")
 #
 #         return observation, reward, terminated, False, info
