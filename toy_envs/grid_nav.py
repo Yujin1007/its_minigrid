@@ -45,7 +45,9 @@ class GridNavigationEnv(gym.Env):
         self.test_attribute = 1
         self.flag_bring_map = False
         self.is_goal=False
-        self.initial_map, self._starting_pos, self.obj_candidate, self.agent_candidate = self._choose_initial_state()
+        self.curriculum = 0
+
+        self.initial_map, self._starting_pos = self._choose_initial_state()
         self._agent_pos = np.copy(self._starting_pos)
         self._new_agent_pos = self._agent_pos
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -55,7 +57,7 @@ class GridNavigationEnv(gym.Env):
     def step(self, action):
         # print("after changing attiribute:",self._agent_pos)
         self._new_agent_pos, self.map, self.is_goal = update_location(agent_pos=self._agent_pos, action=action, map_array=self.map,goal=self.goal_pos)
-        self._history.append(self._agent_pos.tolist())
+        # self._history.append(self._agent_pos.tolist())
 
         observation = self._get_obs()
         info = self._get_info()
@@ -118,43 +120,46 @@ class GridNavigationEnv(gym.Env):
         self.initial_states = flat_new_initial_states
         # print("renew initial states", len(self.initial_states))
         # print(self.initial_states.shape)
+
     def _choose_initial_state(self):
 
         initial_map= copy.deepcopy(random.choice(self.initial_states))
-        # print("len initial_states:", len(self.initial_states), "\n",initial_map)
 
-        # print("\n===========", self.test_attribute)
-        # print("\n===========\n",self.initial_states)
-        obj_candidate = np.argwhere(initial_map == B)
+        if len(np.argwhere(initial_map == R)) == 0:
+            obj_candidate = np.argwhere(initial_map == B)
+            obj_pos = random.choice(obj_candidate)
+            initial_map[obj_pos[0], obj_pos[1]] = R
         agent_pos = np.argwhere(initial_map == A)
-        agent_candidate = np.argwhere(initial_map == O)
+
         if len(agent_pos) == 0:
+            agent_candidate = np.argwhere(initial_map == O)
             starting_pos = random.choice(agent_candidate)
         else:
             starting_pos = agent_pos[0]
-        return initial_map, starting_pos, obj_candidate, agent_candidate
+
+        return initial_map, starting_pos
     def reset(self, obj_idx=None, seed=0):
         """
         This is a deterministic environment, so we don't use the seed."""
         self.num_steps = 0
         self.is_goal=False
-        self.initial_map, self._starting_pos, self.obj_candidate, self.agent_candidate = self._choose_initial_state()
+        self.initial_map, self._starting_pos = self._choose_initial_state()
 
         self._agent_pos = np.copy(self._starting_pos)
         self._new_agent_pos = self._agent_pos
 
-        self._history = [self._agent_pos.tolist()]
-        if obj_idx is None:
-            obj_idx = np.argwhere(self.initial_map== R)
-            if len(obj_idx) == 0: # no red object in the map, choose random one
-                obj_pos = self.obj_candidate[np.random.randint(0,len(self.obj_candidate))]
-            else:
-                obj_pos = obj_idx[0]
-        else:
-            obj_pos = self.obj_candidate[obj_idx]
+        # self._history = [self._agent_pos.tolist()]
+        # if obj_idx is None:
+        #     obj_idx = np.argwhere(self.initial_map== R)
+        #     if len(obj_idx) == 0: # no red object in the map, choose random one
+        #         obj_pos = self.obj_candidate[np.random.randint(0,len(self.obj_candidate))]
+        #     else:
+        #         obj_pos = obj_idx[0]
+        # else:
+        #     obj_pos = self.obj_candidate[obj_idx]
         self.map = np.copy(self.initial_map)
-        self.map[obj_pos[0], obj_pos[1]] = R
-        self.map[self._starting_pos[0], self._starting_pos[1]] = A
+        # self.map[obj_pos[0], obj_pos[1]] = R
+        # self.map[self._starting_pos[0], self._starting_pos[1]] = A
 
         # print("###################initial map:\n", self.map)
         return self._get_obs(), self._get_info()
@@ -187,18 +192,68 @@ class GridNavigationEmptyEnv(GridNavigationEnv):
         initial_map[target_obj[0], target_obj[1]] = R
 
         agent_candidate = np.argwhere((initial_map == O) | (initial_map == G)) # it can locate either empty space or goal pos
-        starting_pos, obj1, obj2 = random.sample(list(agent_candidate), 3)
+        starting_pos, blue_obj = random.sample(list(agent_candidate), 2)
 
-        initial_map[obj1[0], obj1[1]] = B
-        initial_map[obj2[0], obj2[1]] = B
+        initial_map[blue_obj[0], blue_obj[1]] = B
         initial_map[starting_pos[0], starting_pos[1]] = A
 
+        return initial_map, starting_pos
+class GridNavigationCurriculumEnv(GridNavigationEnv):
+    def _choose_initial_state(self):
+        default_obj_pos = [np.array([1,6]), np.array([7,6])]
 
-        agent_candidate = np.argwhere(initial_map == O)
+        initial_map = copy.deepcopy(random.choice(self.initial_states))
+        if self.curriculum == 0: #randomize only agent pos
+            blue_obj, red_obj = random.sample(default_obj_pos,2)
+            initial_map[blue_obj[0], blue_obj[1]] = B
+            initial_map[red_obj[0], red_obj[1]] = R
+
+            agent_candidate = np.argwhere(
+                (initial_map == O) | (initial_map == G))  # it can locate either empty space or goal pos
+            starting_pos = random.choice(agent_candidate)
+            initial_map[starting_pos[0], starting_pos[1]] = A
+
+        elif self.curriculum == 1: #randomize agent and blue object pos
+            target_obj = random.choice(default_obj_pos)
+            initial_map[target_obj[0], target_obj[1]] = R
+            agent_candidate = np.argwhere(
+                (initial_map == O) | (initial_map == G))  # it can locate either empty space or goal pos
+            starting_pos, blue_obj = random.sample(list(agent_candidate), 2)
+
+            initial_map[blue_obj[0], blue_obj[1]] = B
+            initial_map[starting_pos[0], starting_pos[1]] = A
+
+        elif self.curriculum == 2: #randomize agent, blue and red object pos
+            target_candidates = [np.array([1,5]),np.array([1,6]),np.array([1,7]),
+                             np.array([2,5]),np.array([2,6]),np.array([2,7]),
+                             np.array([6,5]),np.array([6,6]),np.array([6,7]),
+                             np.array([7,5]),np.array([7,6]),np.array([7,7])]
+            # target_obj = random.choice(list(target_candidates))
+            target_obj = random.choice(target_candidates)
+
+            initial_map[target_obj[0], target_obj[1]] = R
+
+            agent_candidate = np.argwhere((initial_map == O) | (initial_map == G)) # it can locate either empty space or goal pos
+            starting_pos, blue_obj = random.sample(list(agent_candidate), 2)
+
+            initial_map[blue_obj[0], blue_obj[1]] = B
+            initial_map[starting_pos[0], starting_pos[1]] = A
+
+        else: # randomize all
+            agent_candidate = np.argwhere(
+                (initial_map == O) | (initial_map == G))  # it can locate either empty space or goal pos
+            starting_pos, blue_obj, red_obj = random.sample(list(agent_candidate), 3)
+
+            initial_map[blue_obj[0], blue_obj[1]] = B
+            initial_map[red_obj[0], red_obj[1]] = R
+            initial_map[starting_pos[0], starting_pos[1]] = A
 
 
-        obj_candidate = [target_obj, obj1, obj2]
-        return initial_map, starting_pos, obj_candidate, agent_candidate
+        return initial_map, starting_pos
+    def _trigger_curriculum(self) -> None:
+        self.curriculum += 1
+        print(f"########\nCurrent curriculum is Level {self.curriculum}\n######\n")
+
 if __name__ == "__main__":
 
     env = GridNavigationEnv(

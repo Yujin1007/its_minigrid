@@ -20,7 +20,7 @@ from loguru import logger
 # from reinforce_model import REINFORCE
 from toy_envs.grid_nav import *
 from toy_examples_main import examples
-from gridnav_rl_callbacks import WandbCallback, GridNavVideoRecorderCallback, RLBCTrainingCallback
+from gridnav_rl_callbacks import WandbCallback, GridNavVideoRecorderCallback, RLBCTrainingCallback, CurriculumCallback
 from cfg_utils import load_map_from_example_dict, load_starting_pos_from_example_dict, load_goal_pos_from_example_dict, get_output_path, get_output_folder_name
 
 
@@ -42,8 +42,9 @@ def train(cfg: DictConfig):
     # if goal_pos.size == 0:
     #     goal_pos = np.argwhere(map_array == G)[0]
     goal_pos = np.argwhere(map_array == G)[0]
-    grid_class = GridNavigationEnv
+    # grid_class = GridNavigationEnv
     # grid_class = GridNavigationEmptyEnv
+    grid_class = GridNavigationCurriculumEnv
     with wandb.init(
             project=cfg.logging.wandb_project,
             name=cfg.logging.run_name,
@@ -101,8 +102,10 @@ def train(cfg: DictConfig):
             goal_pos=goal_pos,
         )
 
+        curriculum_callback = CurriculumCallback()
 
-        callback_list = [wandb_callback, video_callback]
+
+        callback_list = [wandb_callback, video_callback, curriculum_callback]
 
         # Train the model
         model.learn(
