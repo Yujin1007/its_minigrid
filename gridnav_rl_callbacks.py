@@ -759,35 +759,58 @@ class RLBCTrainingCallback(BaseCallback):
 
         return True
 
-class Curriculum(BaseCallback):
+class CurriculumCallback(BaseCallback):
     """
-    Stop the training once a threshold in episodic reward
-    has been reached (i.e. when the model is good enough).
-
-    It must be used with the ``EvalCallback``.
-
-    :param reward_threshold:  Minimum expected reward per episode
-        to stop training.
-    :param verbose: Verbosity level: 0 for no output, 1 for indicating when training ended because episodic reward
-        threshold reached
+    Custom callback that monitors episode length mean and episode reward mean
+    to trigger changes in the environment.
     """
 
-    parent: EvalCallback
+    def __init__(self, threshold_len=35, threshold_rew=-200, verbose=0):
+        """
+        Initialize the callback.
 
-    def __init__(self, reward_threshold: float, verbose: int = 0):
-        super().__init__(verbose=verbose)
-        self.reward_threshold = reward_threshold
+        :param env_attr_name: (str) Name of the environment attribute to change.
+        :param new_value_func: (function) Function to calculate the new value for the environment attribute.
+        :param threshold_len: (float) Threshold for `ep_len_mean` to trigger the change.
+        :param threshold_rew: (float) Threshold for `ep_rew_mean` to trigger the change.
+        :param verbose: (int) Verbosity level.
+        """
+        super(CurriculumCallback, self).__init__(verbose)
+        self.threshold_len = threshold_len
+        self.threshold_rew = threshold_rew
+        self.cnt_threshold = 0
 
     def _on_step(self) -> bool:
-        assert self.parent is not None, "``StopTrainingOnMinimumReward`` callback must be used with an ``EvalCallback``"
-        continue_training = bool(self.parent.best_mean_reward < self.reward_threshold)
-        if self.verbose >= 1 and not continue_training:
-            print(
-                f"Stopping training because the mean reward {self.parent.best_mean_reward:.2f} "
-                f" is above the threshold {self.reward_threshold}"
-            )
-        return continue_training
+        # Access training logs
+        if self.locals.get("infos", None) is None:
+            return True
 
+
+        ep_info_buffer = self.model.__getattribute__("ep_info_buffer")
+        ep_len_mean = np.mean([info["l"] for info in ep_info_buffer])
+        # ep_rew_mean = np.mean([info["r"] for info in ep_info_buffer])
+        if ep_info_buffer and len(ep_info_buffer) > 0:
+            recent_ep_len = ep_info_buffer[-1]["l"]
+            if recent_ep_len <= self.threshold_len:
+                self.cnt_threshold += 1
+        trigger_change = False
+
+
+        if self.threshold_len is not None and ep_len_mean is not None:
+            if (ep_len_mean <= self.threshold_len) and (self.cnt_threshold >= 100):
+                self.cnt_threshold = 0
+                trigger_change = True
+
+        # if self.threshold_rew is not None and ep_rew_mean is not None:
+        #     if ep_rew_mean >= self.threshold_rew:
+        #         trigger_change = True
+
+        if trigger_change:
+            # Calculate the new value and apply it to the environment
+            self.training_env.env_method("_trigger_curriculum")
+
+
+        return True
 # class SetInitialStatesCallback(BaseCallback):
 #     def __init__(self, param_name, new_value, bc_training_interval, verbose=0):
 #         """
