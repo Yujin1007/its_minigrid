@@ -28,7 +28,7 @@ A = 4     #agent
 class GridNavigationEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"]}
 
-    def __init__(self, map_array, goal_pos, render_mode=None, episode_length=20, full_observability=True):
+    def __init__(self, map_array, goal_pos, render_mode=None, episode_length=100, full_observability=True):
         self.grid_size = map_array.shape  # The size of the square grid
 
         # Observations is the agent's location in the grid
@@ -36,7 +36,8 @@ class GridNavigationEnv(gym.Env):
         self.observation_space = spaces.Box(low=W,high=A,shape=self.grid_size, dtype=np.int64)
 
         # We have 5 actions, corresponding to "right", "up", "left", "down", "do nothing"
-        self.action_space = spaces.Discrete(5)
+        # self.action_space = spaces.Discrete(5)
+        self.action_space = spaces.Discrete(4) #eliminate stay
         self.full_observability = full_observability
         self.num_steps = 0
         self.goal_pos = goal_pos
@@ -46,6 +47,7 @@ class GridNavigationEnv(gym.Env):
         self.test_attribute = 1
         self.flag_bring_map = False
         self.is_goal=False
+        self.target_edge = False
         self.curriculum = 0
 
         self.initial_map, self._starting_pos = self._choose_initial_state()
@@ -61,6 +63,7 @@ class GridNavigationEnv(gym.Env):
         # self._history.append(self._agent_pos.tolist())
 
         observation = self._get_obs()
+        terminated = self._get_done()
         info = self._get_info()
         reward = self._get_reward()
         # # reward = 0
@@ -76,7 +79,7 @@ class GridNavigationEnv(gym.Env):
 
         self.num_steps += 1
 
-        terminated = self.num_steps >= self.episode_length or self.is_goal
+
         return observation, reward, terminated,  False, info
 
     def _get_obs(self):
@@ -104,6 +107,15 @@ class GridNavigationEnv(gym.Env):
             print("map\n", self.map)
             print("termination \n", terminal_map)
             return None
+    def _get_done(self):
+        target_pos = np.argwhere(self.map == R)[0]
+        x = target_pos[0]
+        y = target_pos[1]
+
+        if x <= 0 or y <= 0 or x >= map_array.shape[0]-1 or y >= map_array.shape[1]-1:
+            self.target_edge = True
+        terminated = self.num_steps >= self.episode_length or self.is_goal or self.target_edge
+        return terminated
     def _get_info(self):
         return {"step": self.num_steps, "goal": self.is_goal}
     def _get_reward(self):
@@ -111,10 +123,14 @@ class GridNavigationEnv(gym.Env):
         l1_norm_to_goal = np.linalg.norm(target_pos-self.goal_pos, ord=1)
         l1_norm_to_target = np.linalg.norm(target_pos-self._new_agent_pos, ord=1)
         l1_norm = l1_norm_to_goal + l1_norm_to_target
+
         if self.is_goal:
-            return 1
+            return 100
         else:
-            return -l1_norm
+            if self.target_edge:
+                return -1000
+            else:
+                return -l1_norm
     def _set_initial_states(self, new_initial_states) -> None:
         # Note: this value should be used only at the next reset
         flat_new_initial_states = [item for sublist in new_initial_states for item in sublist]
@@ -144,6 +160,7 @@ class GridNavigationEnv(gym.Env):
         This is a deterministic environment, so we don't use the seed."""
         self.num_steps = 0
         self.is_goal=False
+        self.target_edge=False
         self.initial_map, self._starting_pos = self._choose_initial_state()
 
         self._agent_pos = np.copy(self._starting_pos)
