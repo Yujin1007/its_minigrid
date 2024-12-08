@@ -170,3 +170,6 @@ toy_teacher/rl_train_logs/**/tensorboard/
 toy_student/**/**/tensorboard/
 toy_its/train_logs/**/tensorboard/
 wandb/
+toy_its/
+toy_student/
+toy_teacher/
