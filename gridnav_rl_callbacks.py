@@ -765,7 +765,7 @@ class CurriculumCallback(BaseCallback):
     to trigger changes in the environment.
     """
 
-    def __init__(self, threshold_len=35, threshold_rew=-200, verbose=0):
+    def __init__(self, model_save_path, threshold_len=35, threshold_rew=-200, verbose=0):
         """
         Initialize the callback.
 
@@ -779,6 +779,15 @@ class CurriculumCallback(BaseCallback):
         self.threshold_len = threshold_len
         self.threshold_rew = threshold_rew
         self.cnt_threshold = 0
+        self.model_save_path = model_save_path
+
+
+    def save_model(self) -> None:
+        model_path = os.path.join(
+        self.model_save_path, f"model_{self.model.num_timesteps}_steps.zip"
+        )
+        self.model.save(model_path)
+
 
     def _on_step(self) -> bool:
         # Access training logs
@@ -800,6 +809,8 @@ class CurriculumCallback(BaseCallback):
             if (ep_len_mean <= self.threshold_len) and (self.cnt_threshold >= 100):
                 self.cnt_threshold = 0
                 trigger_change = True
+
+                self.save_model()
 
         # if self.threshold_rew is not None and ep_rew_mean is not None:
         #     if ep_rew_mean >= self.threshold_rew:

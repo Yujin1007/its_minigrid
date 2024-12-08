@@ -49,7 +49,7 @@ def generate_unmasked_trajectories(expert_policy, env, n_episodes=10):
 
     return trajectories
 
-def collect_augmented_trajectories(trajectories, expert_policy, bc_policy, env, beta=0.8):
+def collect_augmented_trajectories(trajectories, expert_policy, bc_policy, env, beta=0.8, full_visibility=False):
     """
     Generate trajectories for the expert using unmasked observations.
 
@@ -69,17 +69,37 @@ def collect_augmented_trajectories(trajectories, expert_policy, bc_policy, env, 
 
     trajectory = {"obs": [], "acts": [], "infos": []}
     trajectory["obs"].append(masked_obs)
+
     while not done:
-        if random() < beta:
-            action, _ = bc_policy.predict(masked_obs)
+        if full_visibility:
+            action_bc = bc_policy.predict(obs)
         else:
-            action, _ = expert_policy.predict(obs, deterministic=True)
-        action = action.item()
-        obs, reward, done, _, info = env.step(action)
+            action_bc = bc_policy.predict(masked_obs)
+        action = expert_policy.predict(obs, deterministic=True)
+        if action == 4: # stuck
+            print("stuck done")
+            break
+        if isinstance(action, tuple):  # Handle VecEnv API
+            action, _ = action
+            action = action.item()
+        if isinstance(action_bc, tuple):  # Handle VecEnv API
+            action_bc, _ = action_bc
+            action_bc = action_bc.item()
+
+        if action_bc != action:
+            dumb_env = copy.deepcopy(env)
+            obs, _, _, _, info = dumb_env.step(action)
+            _, reward, done, _, _ = env.step(action_bc)
+        else:
+            obs, reward, done, _, info = env.step(action)
+        masked_obs = masking_obs(obs)
         # obs = obs["unmasked"]  # Always use unmasked for the expert
         trajectory["acts"].append(action)
         trajectory["infos"].append(info)
-        trajectory["obs"].append(masked_obs)
+        if full_visibility:
+            trajectory["obs"].append(masked_obs.copy())
+        else:
+            trajectory["obs"].append(obs.copy())
     trajectories.append(
         Trajectory(
             obs=np.array(trajectory["obs"]),
@@ -90,13 +110,18 @@ def collect_augmented_trajectories(trajectories, expert_policy, bc_policy, env, 
     )
     return trajectories
 
-def evaluate_policy(policy, env, n_episodes=10, collect_failure=False):
-    student_failed_states = []
+def evaluate_policy(policy, env, n_episodes=10, collect_failure=False, full_visibility=False):
+    # student_failed_states = []
+    frame = []
+    success_cnt = 0
     for episode in range(n_episodes):
         frames = []
         obs, _ = env.reset()
         frames.append(env.render())
-        masked_obs = masking_obs(obs)
+        if full_visibility:
+            masked_obs = obs
+        else:
+            masked_obs = masking_obs(obs)
         # obs = obs["unmasked"]  # Use unmasked observation for the expert
         done = False
         states = [obs]
@@ -107,14 +132,22 @@ def evaluate_policy(policy, env, n_episodes=10, collect_failure=False):
             masked_obs = masking_obs(obs)
             states.append(obs)
             frames.append(env.render())
-        if reward == 0: #student failed
-            student_failed_states = student_failed_states + states
-        imageio.mimsave(f"./toy_student/dagger/testing_{episode}.gif", frames, duration=1 / 20, loop=0)
-        writer = imageio.get_writer(f"./toy_student/dagger/testing_{episode}.mp4", fps=20)
+        # if reward == 0: #student failed
+        #     student_failed_states = student_failed_states + states
+        if info["goal"]:
+            success_cnt += 1
 
-        for im in frames:
-            writer.append_data(im)
-
-        writer.close()
-
-    return student_failed_states
+        # imageio.mimsave(f"./toy_student/dagger/testing_{episode}.gif", frames, duration=1 / 20, loop=0)
+        # writer = imageio.get_writer(f"./toy_student/dagger/testing_{episode}.mp4", fps=20)
+        #
+        # for im in frames:
+        #     writer.append_data(im)
+        #
+        # writer.close()
+        frame.append(frames)
+    evaluation={
+        "success_cnt": success_cnt,
+        "fail_cnr": n_episodes - success_cnt,
+        "success_rate": success_cnt/n_episodes*100,
+    }
+    return evaluation, frame

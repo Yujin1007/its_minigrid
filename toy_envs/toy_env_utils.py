@@ -1,6 +1,7 @@
 import gymnasium as gym
 import numpy as np
 
+from collections import deque
 
 O = 0     #open space
 W = -1    # wall
@@ -105,6 +106,173 @@ def render_map_and_agent(map_array, agent_pos):
 
     return map_with_agent_rgb
 
+# class BFS():
+#     def __init__(self, env):
+#         self.env = env
+#         self.goal_pos = self.env.goal_pos
+#
+#     def predict(self, obs, deterministic=True):
+#         agent_pos = np.argwhere(obs == A)[0]
+#         path = self.bfs_shortest_path(obs, agent_pos, self.goal_pos)
+#         return path[0]
+#
+#     def bfs_shortest_path(self, map_array, agent_pos, goal_pos, max_steps=100):
+#         """
+#         Find the shortest path to move the red object to the goal using BFS.
+#         """
+#         # BFS queue: (current_agent_pos, current_map, path, steps)
+#         queue = deque([(agent_pos, map_array.copy(), [], 0)])
+#         visited = set()
+#
+#         # Encode state for visited set
+#         def encode_state(agent_pos, map_array):
+#             return (tuple(agent_pos), tuple(map_array.flatten()))
+#
+#         while queue:
+#             curr_agent_pos, curr_map, path, steps = queue.popleft()
+#
+#             # Check if we've reached the goal
+#             if curr_map[goal_pos[0], goal_pos[1]] == R:
+#                 return path  # Return the sequence of actions
+#
+#             # Stop if the maximum steps are exceeded
+#             if steps >= max_steps:
+#                 continue
+#
+#             # Mark state as visited
+#             visited.add(encode_state(curr_agent_pos, curr_map))
+#
+#             # Explore all possible actions
+#             for action in range(5):  # 0 to 4
+#                 new_agent_pos, new_map, is_goal = update_location(curr_agent_pos, action, curr_map.copy(), goal_pos)
+#
+#                 # If goal is reached, return the path
+#                 if is_goal:
+#                     return path + [action]
+#
+#                 # Encode the new state
+#                 new_state = encode_state(new_agent_pos, new_map)
+#
+#                 # Add new state to queue if not visited
+#                 if new_state not in visited:
+#                     queue.append((new_agent_pos, new_map, path + [action], steps + 1))
+#
+#         # Return an empty path if no solution is found
+#         return []
+
+
+def bfs_shortest_path(map_array, agent_pos, goal_pos, max_steps=100):
+    """
+    Find the shortest path to move the red object to the goal using BFS.
+    """
+    # BFS queue: (current_agent_pos, current_map, path, steps)
+    queue = deque([(agent_pos, map_array.copy(), [], 0)])
+    visited = set()
+    cnt_search = 0
+    max_search = 1_000_000
+    # Encode state for visited set
+    def encode_state(agent_pos, map_array):
+        return (tuple(agent_pos), tuple(map_array.flatten()))
+
+    while queue:
+        cnt_search += 1
+        if cnt_search >= max_search:
+            print("failed in search")
+            return []
+        curr_agent_pos, curr_map, path, steps = queue.popleft()
+
+        # Check if we've reached the goal
+        if curr_map[goal_pos[0], goal_pos[1]] == R:
+            return path  # Return the sequence of actions
+
+        # Stop if the maximum steps are exceeded
+        if steps >= max_steps:
+            continue
+
+        # Mark state as visited
+        visited.add(encode_state(curr_agent_pos, curr_map))
+
+        # Explore all possible actions
+        for action in range(5):  # 0 to 4
+            new_agent_pos, new_map, is_goal = update_location(curr_agent_pos, action, curr_map.copy(), goal_pos)
+
+            # If goal is reached, return the path
+            if is_goal:
+                return path + [action]
+
+            # Encode the new state
+            new_state = encode_state(new_agent_pos, new_map)
+
+            # Add new state to queue if not visited
+            if new_state not in visited:
+                queue.append((new_agent_pos, new_map, path + [action], steps + 1))
+
+    # Return an empty path if no solution is found
+    return []
+
+class map_feasibility_check():
+    def is_valid_location(self,pos, map_array):
+        x, y = pos
+        if x < 0 or y < 0 or x >= map_array.shape[0] or y >= map_array.shape[1]:
+            return False
+        return map_array[x, y] != W
+
+    def bfs_reachable(self, start_pos, map_array, targets):
+        """
+        Perform BFS to check if the start_pos can reach any of the targets.
+        """
+        queue = deque([start_pos])
+        visited = set()
+        visited.add(tuple(start_pos))
+
+        while queue:
+            x, y = queue.popleft()
+
+            if map_array[x, y] in targets:
+                return True
+
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                new_pos = (x + dx, y + dy)
+                if new_pos not in visited and is_valid_location(new_pos, map_array):
+                    visited.add(new_pos)
+                    queue.append(new_pos)
+
+        return False
+
+    def is_infeasible(self, map_array):
+        """
+        Check for infeasible situations in the given map.
+        """
+        # Locate key elements
+        agent_pos = np.argwhere(map_array == A)[0]
+        red_pos = np.argwhere(map_array == R)
+        goal_pos = np.argwhere(map_array == G)
+
+        # Check if the red object is trapped
+        for pos in red_pos:
+            accessible = False
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                new_pos = (pos[0] + dx, pos[1] + dy)
+                if self.is_valid_location(new_pos, map_array) and map_array[new_pos[0], new_pos[1]] in [O, G, B]:
+                    accessible = True
+                    break
+            if not accessible:
+                print(f"Infeasible: Red object at {pos} is trapped.")
+                return True
+
+        # Check if the goal is reachable
+        if not self.bfs_reachable(agent_pos, map_array, [G, R]):
+            print("Infeasible: Goal or red object is unreachable from the agent.")
+            return True
+
+        # Check if the goal is isolated
+        if not any(self.bfs_reachable(goal, map_array, [R]) for goal in goal_pos):
+            print("Infeasible: Goal is isolated and cannot be reached by the red object.")
+            return True
+
+        # All checks passed
+        print("The map is feasible.")
+        return False
 
 
 class CustomObservationWrapper(gym.ObservationWrapper):

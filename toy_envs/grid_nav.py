@@ -9,7 +9,8 @@ from stable_baselines3.common.utils import obs_as_tensor
 from torchgen.native_function_generation import self_to_out_signature
 from wandb.wandb_agent import agent
 
-from toy_envs.toy_env_utils import update_location, render_map_and_agent
+from toy_envs.bfs_search import map_array
+from toy_envs.toy_env_utils import update_location, render_map_and_agent, bfs_shortest_path
 import copy
 DOWN = 0
 RIGHT = 1
@@ -200,7 +201,8 @@ class GridNavigationEmptyEnv(GridNavigationEnv):
         return initial_map, starting_pos
 class GridNavigationCurriculumEnv(GridNavigationEnv):
     def _choose_initial_state(self):
-        default_obj_pos = [np.array([1,6]), np.array([7,6])]
+        default_obj_pos = [np.array([1,5]), np.array([7,7])]
+        # default_obj_pos = [np.array([1,6]), np.array([7,6])]
 
         initial_map = copy.deepcopy(random.choice(self.initial_states))
         if self.curriculum == 0: #randomize only agent pos
@@ -268,23 +270,26 @@ if __name__ == "__main__":
         #     [O, O, O, W, O, O, B, O, O],
         #     [O, O, O, W, O, O, O, O, O]
         # ]),
-        np.array([
-            [ 0,  0,  0, -1,  0,  0,  0,  0,  0],
-            [ 0,  0,  0, -1,  0,  0,  B,  0,  0],
-            [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [ 0,  0,  0, -1,  0,  0,  0,  0,  0],
-            [-1,  0, -1, -1, -1, -1,  G,  B, -1],
-            [ 0,  0,  0, -1,  0,  0,  0,  0,  0],
-            [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [ 0,  0,  0,  B,  R,  A,  0,  0,  0],
-            [ 0,  0,  0, -1,  0,  0,  0,  0,  0]]),
+        map_array = np.array([
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, O, O, R, O, O, O],
+            [O, O, O, W, O, O, B, O, O],
+            [W, A, W, W, W, W, G, O, O],
+            [O, O, O, W, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, W, O, O, B, O, O],
+            [O, O, O, W, O, O, O, O, O]
+        ]),
 
         render_mode="rgb_array",
         goal_pos=np.array([4,6]),)
     env.reset()
     env.render()
     
-    path = [LEFT,LEFT,LEFT]
+    # path = [LEFT,LEFT,LEFT]
+    # path = [2, 1, 2, 1, 1, 2, 1, 0, 0, 3, 0, 1]
+    path = bfs_shortest_path(env.map, env._agent_pos, env.goal_pos)
     # path = [UP, UP, RIGHT, RIGHT, RIGHT, RIGHT, UP,UP, RIGHT, DOWN,DOWN,DOWN, UP, LEFT, LEFT, LEFT, LEFT, LEFT,DOWN,DOWN,DOWN,DOWN,RIGHT,RIGHT,RIGHT,RIGHT, UP, RIGHT, UP,UP, DOWN,DOWN, LEFT,DOWN,DOWN,DOWN, RIGHT,UP,UP,UP,STAY]
     # path = [3, 4, 2, 1, 3, 1, 3, 1, 2, 1, 1, 2, 2, 4, 1, 1, 0, 0, 0]
     frames = []

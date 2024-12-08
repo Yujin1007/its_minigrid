@@ -93,6 +93,20 @@ empty_map2 = {
             [O, O, O, W, O, O, O, O, O]
     ]),
 }
+empty_map3 = {
+    "map_array": np.array([
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, G, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O],
+            [O, O, O, O, O, O, O, O, O]
+    ]),
+}
+
 student_failed_map = {
     "plot": {
         "reward_vmin": 0,

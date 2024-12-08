@@ -1,4 +1,6 @@
 import os
+from types import SimpleNamespace
+
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -88,8 +90,11 @@ def rollout_steps(model, env, max_steps=None, iseval=False, isStudent=True, epis
     obs_raw_array = []
     done = False
     step_count = 0
-    frames.append(env.render())
+    frame = []
+    frame.append(env.render())
+    timestep = 0
     while not done:
+        timestep +=1
         if isStudent:
             masked_observation = masking_obs(obs)
             action, _ = model.predict(masked_observation, deterministic=True)  # Predict action
@@ -111,11 +116,13 @@ def rollout_steps(model, env, max_steps=None, iseval=False, isStudent=True, epis
 
         trajectory["infos"].append(info)
         step_count += 1
-        frames.append(env.render())
+        frame.append(env.render())
         # Stop if max_steps is specified and reached
         if max_steps and step_count >= max_steps:
             break
-
+    frames.append(frame)
+    print(f"Time step : {timestep}, info: {info}")
+    frame = []
     # Append the final observation
     # trajectory["obs"].append(obs.copy())
     obs_raw_array.append(obs.copy())
@@ -156,39 +163,64 @@ def collect_demonstrations(model, env, num_episodes=10, max_steps=None, iseval=F
 
     return trajectories
 
-@hydra.main(version_base=None, config_path="config", config_name="train_bc_config")
 def train(cfg: DictConfig):
     global frames
     # pretrained_model_path = cfg.bc_algo.pre_trained_path# "toy_teacher/rl_train_logs/2024-11-21-151501_map=map_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint/final_mocgdel.zip"  # Update with your saved model path
     # model_save_path = cfg.log_path
     map_array = load_map_from_example_dict(cfg.env.example_name)
     # starting_pos = load_starting_pos_from_example_dict(cfg.env.example_name)
-    goal_pos = load_goal_pos_from_example_dict(cfg.env.example_name)
+    goal_pos = np.argwhere(map_array == G)[0]
     # goal_pos =
     episode_length = cfg.env.episode_length
-    grid_class = GridNavigationEnv
+    # grid_class = GridNavigationEnv
+    grid_class = GridNavigationCurriculumEnv
     env = grid_class(map_array=np.copy(map_array), goal_pos=goal_pos, render_mode="rgb_array",
                                  episode_length=episode_length)
-    pretrained_model_path = get_model_path(cfg.teacher.path, cfg.teacher.checkpoint)
 
-    pretrained_model = PPO.load(pretrained_model_path, env=env)
+
 
     # Step 2: Generate Demonstrations
 
     # Collect demonstrations
-    trajectories = collect_demonstrations(pretrained_model, env, num_episodes=5)
+    log_path = os.path.join(cfg.teacher.path, "checkpoint")
+    log_path = os.path.join(log_path, cfg.teacher.checkpoint)
+    eval_path = os.path.join(cfg.teacher.path, "eval")
+    eval_path = os.path.join(eval_path, cfg.teacher.checkpoint)
+    pretrained_model = PPO.load(log_path, env=env)
+    for level in range(3):
+        env.curriculum = level
+        _ = collect_demonstrations(pretrained_model, env, num_episodes=5)
 
-    if not os.path.exists(cfg.log_path):
-        # If it doesn't exist, create it
-        os.makedirs(cfg.log_path)
-    imageio.mimsave(f"{cfg.log_path}/student_failed_state_Teacher.gif", frames, duration=1 / 20, loop=0)
-    writer = imageio.get_writer(f'student_failed_state_Teacher.mp4', fps=20)
-    for im in frames:
-        writer.append_data(im)
-    frames = []
+        if not os.path.exists(eval_path):
+            # If it doesn't exist, create it
+            os.makedirs(eval_path)
+        # imageio.mimsave(f"{log_path}/student_failed_state_Teacher.gif", frames, duration=1 / 20, loop=0)
+
+        for i, im in enumerate(frames):
+
+            imageio.mimsave(f"{eval_path}/Level{level}_{i}.gif", im, duration=1 / 20, loop=0)
+        frames = []
     # writer.close()
 
-
+def dict_to_namespace(d):
+    """
+    Recursively convert a dictionary into a SimpleNamespace.
+    """
+    if isinstance(d, dict):
+        return SimpleNamespace(**{k: dict_to_namespace(v) for k, v in d.items()})
+    return d
 if __name__ == "__main__":
-    # train_or_sweep()
-    train()
+    cfg_dict = {
+        "teacher":{
+            "path": "toy_teacher/rl_train_logs/empty_map2_2024-12-05-160310_nt=DenseRewardCurriculum_empty2_ent_coef05",
+            "checkpoint": "model_18000000_steps",
+
+        },
+        "env":{
+            "example_name": "empty_map2",
+            "episode_length": 100
+        },
+
+    }
+    cfg = dict_to_namespace(cfg_dict)
+    train(cfg)

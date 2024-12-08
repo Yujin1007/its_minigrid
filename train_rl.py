@@ -73,6 +73,9 @@ def train(cfg: DictConfig):
         #                  episode_length=episode_length)
 
         # Define the model
+        policy_kwargs = dict(
+            net_arch= [128, 128],
+        )
         model = PPO("MlpPolicy",
                     training_env,
                     n_steps=cfg.env.episode_length,
@@ -84,7 +87,8 @@ def train(cfg: DictConfig):
                     gamma=cfg.rl_algo.gamma,
                     ent_coef=ent_coef,
                     vf_coef=vf_coef,
-                    verbose=1)
+                    verbose=1,
+                    policy_kwargs=policy_kwargs,)
 
         checkpoint_dir = os.path.join(cfg.logging.run_path, "checkpoint")
 
@@ -102,7 +106,7 @@ def train(cfg: DictConfig):
             goal_pos=goal_pos,
         )
 
-        curriculum_callback = CurriculumCallback()
+        curriculum_callback = CurriculumCallback(model_save_path=str(checkpoint_dir),)
 
 
         callback_list = [wandb_callback, video_callback, curriculum_callback]

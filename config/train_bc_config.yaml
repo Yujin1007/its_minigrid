@@ -1,6 +1,6 @@
 seed: 9
 
-run_notes: null
+run_notes: DAgger_InitBC
 
 model_base_path: null  # Folder to load the model from
 model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
@@ -26,29 +26,34 @@ logging:
   run_path: null
 
 env:
-  example_name: map2
+  example_name: empty_map3
 #  example_name: student_failed_map
 #  example_name: map_realizability3
   episode_length: 100
   include_history: false
+  curriculum: 2
 
 bc_algo:
-  name: il
-  total_timesteps: 1000000
+  name: dagger
+  visibility: occluded
+  total_episode: 100
+  total_timestep: 100*100
   n_epochs: 10
   batch_size: 64
   gamma: 0.99
   n: null
+
 #  pre_trained_path: toy_teacher/rl_train_logs/2024-11-21-151501_map=map_rl=ppo-epochs=10-eplen=100_s=9_nt=None/checkpoint/final_mocgdel.zip
 
 #cost_fn: nav_shortest_path
 
-log_folder: ./toy_its/train_logs/map2_fixpos
-log_path: ${log_folder}/${now:%Y-%m-%d-%H%M%S}/
+log_folder: ./toy_student/dagger_bfs/train_logs/
+log_path: ${log_folder}/${env.example_name}_visibility=${bc_algo.visibility}_level=${env.curriculum}_${now:%Y-%m-%d-%H%M%S}_nt=${run_notes}
 defaults:
 #  - seq_reward_model: dtw
   - _self_
 
+
 hydra:
   run:
-    dir: ${log_folder}/${now:%Y-%m-%d-%H%M%S}_map=${env.example_name}_rl=${bc_algo.name}-epochs=${bc_algo.n_epochs}-eplen=${env.episode_length}_s=${seed}_nt=${run_notes}
+    dir: ${log_folder}/${env.example_name}_visibility=${bc_algo.visibility}_level=${env.curriculum}_${now:%Y-%m-%d-%H%M%S}_nt=${run_notes}

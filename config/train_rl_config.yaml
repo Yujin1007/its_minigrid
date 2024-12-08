@@ -1,6 +1,6 @@
 seed: 9
 
-run_notes: DenseRewardCurriculum
+run_notes: DenseRewardCurriculum_empty2_ent_coef05
 
 model_base_path: null  # Folder to load the model from
 model_checkpoint: null  # Model checkpoint zip file name (without .zip) to load
@@ -24,7 +24,7 @@ logging:
 env:
 #  example_name: map
 #  example_name: map_realizability3
-  example_name: empty_map
+  example_name: empty_map2
   episode_length: 100
   include_history: false
 
