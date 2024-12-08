@@ -142,6 +142,7 @@ def train(cfg: DictConfig):
     episode_length = cfg.env.episode_length
     total_episode = cfg.bc_algo.total_episode
     visibility = cfg.bc_algo.visibility
+    n_epoch = cfg.bc_algo.n_epochs
     # logger.info(f"Logging to {cfg.logging.run_path}\nRun name: {cfg.logging.run_name}")
     goal_pos = np.argwhere(map_array == G)[0]
     os.makedirs(os.path.join(cfg.logging.run_path, "eval"), exist_ok=True)
@@ -177,7 +178,7 @@ def train(cfg: DictConfig):
         )
 
         # initialize BC policy
-        bc.train(n_epochs=10)
+        bc.train(n_epochs=n_epoch)
 
         evaluation_bc, _ = evaluate_policy(bc.policy, env, eval_episode, full_visibility)
         print(f"BC policy: {evaluation_bc}")
@@ -186,11 +187,13 @@ def train(cfg: DictConfig):
             save_path = os.path.join(os.path.join(cfg.log_path,"eval"), f"BC_{i}.gif")
             imageio.mimsave(save_path, frame, duration=1 / 20, loop=0)                    #DAgger
         frames = []
-        model_save_path = os.path.join(cfg.log_path, "BC.pth")
+        model_save_path = os.path.join(cfg.log_path, "BC")
         model_save_dir = os.path.dirname(model_save_path)
         os.makedirs(model_save_dir, exist_ok=True)
 
-        bc.policy.save(model_save_path)
+        # bc.policy.save(model_save_path)
+        torch.save(bc.policy.state_dict(), model_save_path)
+
     else:
         bc = BC(
             observation_space=env.observation_space,
@@ -204,7 +207,7 @@ def train(cfg: DictConfig):
         print("#####\nIteration : ",i,"\n####")
         trajectories = collect_augmented_trajectories(trajectories, expert, bc.policy, env, full_visibility)
         bc.set_demonstrations(trajectories)
-        bc.train(n_epochs=10)
+        bc.train(n_epochs=n_epoch)
 
     evaluation_dagger, _ = evaluate_policy(bc.policy, env, eval_episode, full_visibility)
     print(f"BC policy: {evaluation_dagger}")
@@ -212,11 +215,13 @@ def train(cfg: DictConfig):
     for i,frame in enumerate(frames):
         save_path = os.path.join(os.path.join(cfg.log_path,"eval"), f"DAgger_{i}.gif")
         imageio.mimsave(save_path, frame, duration=1 / 20, loop=0)
-    model_save_path = os.path.join(cfg.log_path, "DAgger.pth")
+    model_save_path = os.path.join(cfg.log_path, "DAgger")
     model_save_dir = os.path.dirname(model_save_path)
     os.makedirs(model_save_dir, exist_ok=True)
 
-    bc.policy.save(model_save_path)
+    # bc.policy.save(model_save_path)
+    torch.save(bc.policy.state_dict(), model_save_path)
+
     print("Imitation learning agent saved!")
 
     evaluation={"BC":evaluation_bc, "DAgger":evaluation_dagger}
@@ -239,7 +244,7 @@ def test(cfg):
                      episode_length=episode_length)
     env.curriculum = 2
 
-    policy_path = "/Users/yujinkim/Desktop/its_minigrid/toy_student/dagger_bfs/train_logs/2024-12-06-110021/imitation_policy.pth"
+    policy_path = "/Users/yujinkim/Desktop/its_minigrid/toy_student/dagger_bfs/train_logs/empty_map3_visibility=occluded_level=2_2024-12-08-141712_nt=DAgger_InitBC/DAgger.pth"
 
     bc = FeedForward32Policy(observation_space=env.observation_space,
                                  action_space=env.action_space,
