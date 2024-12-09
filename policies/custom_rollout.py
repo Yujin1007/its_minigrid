@@ -151,3 +151,85 @@ def evaluate_policy(policy, env, n_episodes=10, collect_failure=False, full_visi
         "success_rate": success_cnt/n_episodes*100,
     }
     return evaluation, frame
+
+
+def compare_policy(bc, dagger, env, n_episodes=10, full_visibility=False):
+    frame1 = []
+    frame2 = []
+    success_cnt1 = 0
+    success_cnt2 = 0
+    bc_wins = []
+    dagger_wins = []
+    for episode in range(n_episodes):
+        frames1 = []
+        frames2 = []
+        bc_succeed = False
+        dagger_succeed = False
+
+        obs, _ = env.reset()
+        env2 = copy.deepcopy(env)
+        obs2 = copy.deepcopy(obs)
+        frames1.append(env.render())
+        if full_visibility:
+            masked_obs = obs
+        else:
+            masked_obs = masking_obs(obs)
+        # obs = obs["unmasked"]  # Use unmasked observation for the expert
+        done = False
+        states = [obs]
+        while not done:
+            action, _ = bc.predict(masked_obs, deterministic=True)
+            action = action.item()
+            obs, reward, done, _, info = env.step(action)
+            masked_obs = masking_obs(obs)
+            states.append(obs)
+            frames1.append(env.render())
+        # if reward == 0: #student failed
+        #     student_failed_states = student_failed_states + states
+        if info["goal"]:
+            success_cnt1 += 1
+            bc_succeed = True
+        frame1.append(frames1)
+
+        frames2.append(env2.render())
+        obs = obs2
+        if full_visibility:
+            masked_obs = obs
+        else:
+            masked_obs = masking_obs(obs)
+        # obs = obs["unmasked"]  # Use unmasked observation for the expert
+        done = False
+        states = [obs]
+        while not done:
+            action, _ = dagger.predict(masked_obs, deterministic=True)
+            action = action.item()
+            obs, reward, done, _, info = env2.step(action)
+            masked_obs = masking_obs(obs)
+            states.append(obs)
+            frames2.append(env2.render())
+        # if reward == 0: #student failed
+        #     student_failed_states = student_failed_states + states
+        if info["goal"]:
+            success_cnt2 += 1
+            dagger_succeed = True
+        frame2.append(frames2)
+        if bc_succeed and not dagger_succeed:
+            bc_wins.append(episode)
+        if dagger_succeed and not bc_succeed:
+            dagger_wins.append(episode)
+    evaluation={
+        "BC":{
+            "success_cnt": success_cnt1,
+            "fail_cnr": n_episodes - success_cnt1,
+            "success_rate": success_cnt1 / n_episodes * 100,
+            "wins": bc_wins
+        },
+        "DAgger": {
+            "success_cnt": success_cnt2,
+            "fail_cnr": n_episodes - success_cnt2,
+            "success_rate": success_cnt2 / n_episodes * 100,
+            "wins": dagger_wins
+        },
+
+    }
+    return evaluation, frame1, frame2

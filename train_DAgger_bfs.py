@@ -11,6 +11,9 @@ import numpy as np
 from policies.bfs import BFS
 from policies.BC import customBC
 import torch
+
+# from test_its import policy
+
 frames = []
 W = -1    # wall
 O = 0     #open space
@@ -143,6 +146,7 @@ def train(cfg: DictConfig):
     total_episode = cfg.bc_algo.total_episode
     visibility = cfg.bc_algo.visibility
     n_epoch = cfg.bc_algo.n_epochs
+    batch = cfg.bc_algo.batch_size
     # logger.info(f"Logging to {cfg.logging.run_path}\nRun name: {cfg.logging.run_name}")
     goal_pos = np.argwhere(map_array == G)[0]
     os.makedirs(os.path.join(cfg.logging.run_path, "eval"), exist_ok=True)
@@ -154,7 +158,7 @@ def train(cfg: DictConfig):
     flag_bc_init = True
     rng = np.random.default_rng(seed=42)
     trajectories = []
-    eval_episode = 100
+    eval_episode = 10
     if visibility == "full":
         full_visibility = True
     elif visibility == "occluded":
@@ -208,6 +212,10 @@ def train(cfg: DictConfig):
         trajectories = collect_augmented_trajectories(trajectories, expert, bc.policy, env, full_visibility)
         bc.set_demonstrations(trajectories)
         bc.train(n_epochs=n_epoch)
+        if i%100 == 0:
+            model_save_path = os.path.join(cfg.log_path, f"DAgger_{i}")
+            model_save_dir = os.path.dirname(model_save_path)
+            os.makedirs(model_save_dir, exist_ok=True)
 
     evaluation_dagger, _ = evaluate_policy(bc.policy, env, eval_episode, full_visibility)
     print(f"BC policy: {evaluation_dagger}")
@@ -233,33 +241,47 @@ def train(cfg: DictConfig):
 def test(cfg):
     grid_class = GridNavigationCurriculumEnv
 
-    cfg.logging.run_name = get_output_folder_name(cfg.log_folder)
-    cfg.logging.run_path = get_output_path()
     episode_length = cfg.env.episode_length
-    # logger.info(f"Logging to {cfg.logging.run_path}\nRun name: {cfg.logging.run_name}")
     goal_pos = np.argwhere(map_array == G)[0]
-    os.makedirs(os.path.join(cfg.logging.run_path, "eval"), exist_ok=True)
 
     env = grid_class(map_array=np.copy(map_array), goal_pos=goal_pos, render_mode="rgb_array",
                      episode_length=episode_length)
-    env.curriculum = 2
-
-    policy_path = "/Users/yujinkim/Desktop/its_minigrid/toy_student/dagger_bfs/train_logs/empty_map3_visibility=occluded_level=2_2024-12-08-141712_nt=DAgger_InitBC/DAgger.pth"
-
+    env.curriculum = cfg.env.curriculum
+    visibility = cfg.env.visibility
+    if visibility == "full":
+        full_visibility = True
+    elif visibility == "occluded":
+        full_visibility = False
+    else:
+        full_visibility = False
+    policy_path = "/Users/yujinkim/Desktop/its_minigrid/toy_student/dagger_bfs/train_logs/empty_map3_visibility=occluded_level=2_2024-12-08-175456_nt=DAgger_InitBC_1000ep_10epoch"
+    bc_policy_path = os.path.join(policy_path, "BC")
     bc = FeedForward32Policy(observation_space=env.observation_space,
                                  action_space=env.action_space,
                                  lr_schedule=lambda _: 0.001)
-    bc.load_state_dict(torch.load(policy_path))
+    bc.load_state_dict(torch.load(bc_policy_path,weights_only=True))
+    dagger_policy_path =  os.path.join(policy_path, "DAgger")
+    dagger = FeedForward32Policy(observation_space=env.observation_space,
+                             action_space=env.action_space,
+                             lr_schedule=lambda _: 0.001)
+    dagger.load_state_dict(torch.load(dagger_policy_path,weights_only=True))
     # bc = FeedForward32Policy.load(policy_path)
-    evaluation, _ = evaluate_policy(bc.policy, env, 100)
-    print(f"BC policy: {evaluation}")
-    evaluation, frames = evaluate_policy(bc.policy, env, 4)
-    for i, frame in enumerate(frames):
-        save_path = os.path.join(os.path.join(cfg.log_path, "eval"), f"{i}.gif")
+    evaluation, frame_bc, frame_dagger = compare_policy(bc, dagger, env, 100, full_visibility)
+
+    print(f"policy: {evaluation}")
+
+    save_path = os.path.join(os.path.join(policy_path, "eval"), "testtime_evaluation.json")
+    with open(save_path, "w") as f:
+        json.dump(evaluation, f, indent=4)
+
+    for i, frame in enumerate(frames[evaluation["BC"]["wins"]]):
+        save_path = os.path.join(os.path.join(policy_path, "eval"), f"bc_wins{i}.gif")
         imageio.mimsave(save_path, frame, duration=1 / 20, loop=0)
-    model_save_path = os.path.join(cfg.log_path, "imitation_policy.pth")
-    model_save_dir = os.path.dirname(model_save_path)
-    os.makedirs(model_save_dir, exist_ok=True)
+    for i, frame in enumerate(frames[evaluation["DAgger"]["wins"]]):
+        save_path = os.path.join(os.path.join(policy_path, "eval"), f"dagger_wins{i}.gif")
+        imageio.mimsave(save_path, frame, duration=1 / 20, loop=0)
+
+
 if __name__ == "__main__":
     # train_or_sweep()
     # test()
